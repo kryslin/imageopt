@@ -25,6 +25,7 @@
 namespace SourceBroker\Imageopt\Executor;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ExecutorResult;
 
 class OptimizationExecutorRemoteTinypng extends OptimizationExecutorRemote
@@ -53,9 +54,10 @@ class OptimizationExecutorRemoteTinypng extends OptimizationExecutorRemote
      * Upload file to tinypng.com and save it if optimization will be success
      *
      * @param string $inputImageAbsolutePath Absolute path/file with original image
+     * @param Image $image
      * @param ExecutorResult $executorResult
      */
-    protected function process($inputImageAbsolutePath, ExecutorResult $executorResult)
+    protected function process(string  $inputImageAbsolutePath, Image $image, ExecutorResult $executorResult)
     {
         $executorResult->setCommand('URL: ' . $this->url['upload']);
         $result = $this->request(file_get_contents($inputImageAbsolutePath), $this->url['upload']);

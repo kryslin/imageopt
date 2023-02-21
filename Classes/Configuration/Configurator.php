@@ -87,13 +87,19 @@ class Configurator
      *
      * @param string $providerType
      * @param string $fileType
+     * @param array $providerSettings
      * @return array
      */
-    public function getProviders($providerType, $fileType)
+    public function getProviders($providerType, $fileType, $providerSettings = [])
     {
-        $providers = !empty($this->providers[$providerType])
+        $providers = array_map(
+            static function($provider) use ($providerSettings) {
+                $provider['executors'][10]['settings'] = $providerSettings;
+                return $provider;
+            },
+            !empty($this->providers[$providerType])
             ? $this->providers[$providerType]
-            : [];
+            : []);
 
         return array_filter($providers, function ($provider) use ($fileType) {
             $providerFileTypes = explode(',', $provider['fileType']);

@@ -25,6 +25,7 @@
 namespace SourceBroker\Imageopt\Service;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ModeResult;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -98,7 +99,7 @@ class OptimizeImagesFolderService
      */
     public function optimizeFolderFile($absoluteFilePath)
     {
-        $modeResults = $this->optimizeImageService->optimize($absoluteFilePath);
+        $modeResults = $this->optimizeImageService->optimize(Image::createFromPath($absoluteFilePath));
 
         $defaultOptimizationResult = isset($modeResults['default'])
             ? $modeResults['default']

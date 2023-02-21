@@ -25,13 +25,15 @@
 namespace SourceBroker\Imageopt\Executor;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 
 interface OptimizationExecutorInterface
 {
     /**
-     * @param string $image
+     * @param string $imagePath
+     * @param Image $image
      * @param Configurator $configurator
      * @return \SourceBroker\Imageopt\Domain\Model\ExecutorResult
      */
-    public function optimize($image, Configurator $configurator);
+    public function optimize(string $imagePath, Image $image, Configurator $configurator);
 }

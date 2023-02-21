@@ -25,10 +25,12 @@
 namespace SourceBroker\Imageopt\Service;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ModeResult;
 use SourceBroker\Imageopt\Domain\Model\StepResult;
 use SourceBroker\Imageopt\Provider\OptimizationProvider;
 use SourceBroker\Imageopt\Utility\TemporaryFileUtility;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -71,25 +73,18 @@ class OptimizeImageService
      * @return ModeResult[]
      * @throws \Exception
      */
-    public function optimize($originalImagePath)
+    public function optimize(Image $image)
     {
-        if (!file_exists($originalImagePath) || !filesize($originalImagePath)) {
-            throw new \Exception('Can not read file to optimize. File: "' . $originalImagePath . '"');
-        }
-        // create original image copy - it may vary (provider may overwrite original image)
-        $sourceImagePath = $this->temporaryFile->createTemporaryCopy($originalImagePath);
-
         $modeResults = [];
         foreach ((array)$this->configurator->getOption('mode') as $modeKey => $modeConfig) {
             $regexp = '@' . $modeConfig['fileRegexp'] . '@';
             $modeConfig['name'] = $modeKey;
-            if (!preg_match($regexp, $originalImagePath)) {
+            if (!$image->matchExtension($regexp)) {
                 continue;
             }
             $modeResults[$modeKey] = $this->optimizeSingleMode(
                 $modeConfig,
-                $sourceImagePath,
-                $originalImagePath
+                $image
             );
         }
 
@@ -98,21 +93,20 @@ class OptimizeImageService
 
     /**
      * @param array $modeConfig
-     * @param string $sourceImagePath Path to original image COPY (default optimization mode will overwrite original image)
-     * @param string $originalImagePath Path to original image
+     * @param Image $image
      * @return ModeResult
      * @throws \Exception
      */
-    protected function optimizeSingleMode($modeConfig, $sourceImagePath, $originalImagePath)
+    protected function optimizeSingleMode($modeConfig, Image $image)
     {
         $modeResult = GeneralUtility::makeInstance(ModeResult::class)
-            ->setFileAbsolutePath($originalImagePath)
+            ->setFileAbsolutePath($image->getLocalImagePath())
             ->setName($modeConfig['name'])
             ->setDescription($modeConfig['description'])
-            ->setSizeBefore(filesize($sourceImagePath))
+            ->setSizeBefore(filesize($image->getLocalImagePath()))
             ->setExecutedSuccessfully(false);
 
-        $chainImagePath = $this->temporaryFile->createTemporaryCopy($sourceImagePath);
+        $chainImagePath = $this->temporaryFile->createTemporaryCopy($image->getLocalImagePath());
 
         foreach ($modeConfig['step'] as $stepKey => $stepConfig) {
             $stepResult = GeneralUtility::makeInstance(StepResult::class)
@@ -124,9 +118,10 @@ class OptimizeImageService
 
             $providers = $this->configurator->getProviders(
                 $stepConfig['providerType'],
-                strtolower(explode('/', image_type_to_mime_type(getimagesize($originalImagePath)[2]))[1])
+                strtolower(explode('/', image_type_to_mime_type(getimagesize($image->getLocalImagePath())[2]))[1]),
+                $stepConfig['providerSettings'] ?: []
             );
-            $this->optimizeWithBestProvider($stepResult, $chainImagePath, $providers);
+            $this->optimizeWithBestProvider($stepResult, $chainImagePath, $image, $providers);
             $modeResult->addStepResult($stepResult);
         }
         if ($modeResult->getExecutedSuccessfullyNum() == $modeResult->getStepResults()->count()) {
@@ -136,7 +131,7 @@ class OptimizeImageService
         clearstatcache(true, $chainImagePath);
         $modeResult->setSizeAfter(filesize($chainImagePath));
 
-        $pathInfo = pathinfo($originalImagePath);
+        $pathInfo = pathinfo($image->getLocalImagePath());
         copy($chainImagePath, str_replace(
             ['{dirname}', '{basename}', '{extension}', '{filename}'],
             [$pathInfo['dirname'], $pathInfo['basename'], $pathInfo['extension'], $pathInfo['filename']],
@@ -149,11 +144,12 @@ class OptimizeImageService
     /**
      * @param $stepResult
      * @param string $chainImagePath
+     * @param Image $image
      * @param array $providers
      * @return StepResult
      * @throws \Exception
      */
-    protected function optimizeWithBestProvider($stepResult, $chainImagePath, $providers)
+    protected function optimizeWithBestProvider($stepResult, string $chainImagePath, Image $image, array $providers)
     {
         clearstatcache(true, $chainImagePath);
 
@@ -178,7 +174,7 @@ class OptimizeImageService
             $tmpWorkingImagePath = $this->temporaryFile->createTemporaryCopy($chainImagePath);
             $optimizationProvider = GeneralUtility::makeInstance(OptimizationProvider::class);
 
-            $providerResult = $optimizationProvider->optimize($tmpWorkingImagePath, $providerConfigurator);
+            $providerResult = $optimizationProvider->optimize($tmpWorkingImagePath, $image, $providerConfigurator);
 
             if ($providerResult->isExecutedSuccessfully()) {
                 $providerExecutedSuccessfullyCounter++;

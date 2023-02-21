@@ -22,6 +22,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 
@@ -74,6 +75,7 @@ class OptimizeFalProcessedImages extends BaseCommand
 
         $filesToProcess = $optimizeImagesFalService->getFalProcessedFilesToOptimize($numberOfImagesToProcess);
         if (!empty($filesToProcess)) {
+            /** @var ProcessedFile $fileToProcess */
             foreach ($filesToProcess as $fileToProcess) {
                 $optimizationResults = $optimizeImagesFalService->optimizeFalProcessedFile($fileToProcess);
                 foreach ($optimizationResults as $optimizationResult) {

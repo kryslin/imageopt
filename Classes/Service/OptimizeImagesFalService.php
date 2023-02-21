@@ -25,6 +25,7 @@
 namespace SourceBroker\Imageopt\Service;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ModeResult;
 use SourceBroker\Imageopt\Domain\Repository\ModeResultRepository;
 use SourceBroker\Imageopt\Resource\ProcessedFileRepository;
@@ -86,23 +87,21 @@ class OptimizeImagesFalService
     }
 
     /**
-     * @param $notOptimizedFileRaw array $notOptimizedProcessedFileRaw,
+     * @param ProcessedFile $processedFal
      * @return ModeResult|null
      * @throws \Exception
      */
-    public function optimizeFalProcessedFile($notOptimizedFileRaw)
+    public function optimizeFalProcessedFile($processedFal)
     {
         $fileDoesNotExistOrNotReadable = false;
         $modeResultInfo = '';
         $modeResults = [];
 
-        /** @var ProcessedFile $processedFal */
-        $processedFal = $this->falProcessedFileRepository->findByIdentifier($notOptimizedFileRaw['uid']);
         $sourceFile = $processedFal->getForLocalProcessing(false);
 
         if (file_exists($sourceFile)) {
             if (is_readable($sourceFile)) {
-                $modeResults = $this->optimizeImageService->optimize($sourceFile);
+                $modeResults = $this->optimizeImageService->optimize(Image::createFromProcessedFile($processedFal));
 
                 $defaultOptimizationResult = isset($modeResults['default'])
                     ? $modeResults['default']
@@ -154,11 +153,11 @@ class OptimizeImagesFalService
 
     /**
      * @param int $numberOfImagesToProcess
-     * @return array
+     * @return array|ProcessedFile[]
      */
     public function getFalProcessedFilesToOptimize($numberOfImagesToProcess)
     {
-        return $this->falProcessedFileRepository->findNotOptimizedRaw($numberOfImagesToProcess);
+        return $this->falProcessedFileRepository->findNotOptimized($numberOfImagesToProcess);
     }
 
     /**

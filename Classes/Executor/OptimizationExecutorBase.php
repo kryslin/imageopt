@@ -25,6 +25,7 @@
 namespace SourceBroker\Imageopt\Executor;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ExecutorResult;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -41,7 +42,7 @@ class OptimizationExecutorBase implements OptimizationExecutorInterface
      * @param Configurator $configurator Executor configurator
      * @return ExecutorResult Executor Result
      */
-    public function optimize($inputImageAbsolutePath, Configurator $configurator)
+    public function optimize(string $inputImageAbsolutePath, Image $image, Configurator $configurator)
     {
         $executorResult = GeneralUtility::makeInstance(ExecutorResult::class);
         $executorResult->setExecutedSuccessfully(false);

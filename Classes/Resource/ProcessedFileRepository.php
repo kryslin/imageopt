@@ -43,4 +43,20 @@ class ProcessedFileRepository extends \TYPO3\CMS\Core\Resource\ProcessedFileRepo
         return GeneralUtility::makeInstance($GLOBALS['TYPO3_CONF_VARS']['EXT']['EXTCONF']['imageopt']['database'])
             ->findNotOptimizedRaw($limit);
     }
+
+    /**
+     * Get all not optimized images with $limit
+     *
+     * @param int $limit Number of not optimized images to return
+     * @return array
+     */
+    public function findNotOptimized($limit = 50)
+    {
+        $processedFiles = [];
+        foreach ($this->findNotOptimizedRaw($limit) as $processedFileRaw) {
+            $processedFiles[] = $this->createDomainObject($processedFileRaw);
+        }
+
+        return $processedFiles;
+    }
 }

@@ -25,7 +25,9 @@
 namespace SourceBroker\Imageopt\Executor;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ExecutorResult;
+use SourceBroker\Imageopt\Utility\GraphicalFunctionsUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -64,19 +66,25 @@ class OptimizationExecutorRemote extends OptimizationExecutorBase
     protected $executorOptions = [];
 
     /**
+     * @var array
+     */
+    protected $providerSettings = [];
+
+    /**
      * Optimize image
      *
-     * @param $inputImageAbsolutePath string Absolute path/file with image to be optimized
+     * @param string $inputImageAbsolutePath string Absolute path/file with image to be optimized
+     * @param Image $image
      * @param Configurator $configurator
      * @return ExecutorResult Optimization result
      */
-    public function optimize($inputImageAbsolutePath, Configurator $configurator)
+    public function optimize(string $inputImageAbsolutePath, Image $image, Configurator $configurator)
     {
         $executorResult = GeneralUtility::makeInstance(ExecutorResult::class);
         $executorResult->setExecutedSuccessfully(false);
         if ($this->initConfiguration($configurator)) {
             $executorResult->setSizeBefore(filesize($inputImageAbsolutePath));
-            $this->process($inputImageAbsolutePath, $executorResult);
+            $this->process($inputImageAbsolutePath, $image, $executorResult);
             $executorResult->setSizeAfter(filesize($inputImageAbsolutePath));
         } else {
             $executorResult->setErrorMessage('Unable to initialize executor - check configuration');
@@ -126,6 +134,11 @@ class OptimizationExecutorRemote extends OptimizationExecutorBase
             $this->executorOptions = $options;
         }
 
+        $settings = $configurator->getOption('settings');
+        if (is_array($settings) && !empty($settings)) {
+            $this->providerSettings = $settings;
+        }
+
         return true;
     }
 
@@ -133,9 +146,10 @@ class OptimizationExecutorRemote extends OptimizationExecutorBase
      * Process specific executor logic
      *
      * @param string $inputImageAbsolutePath Absolute path/file with original image
+     * @param Image $image
      * @param ExecutorResult $executorResult
      */
-    protected function process($inputImageAbsolutePath, ExecutorResult $executorResult)
+    protected function process(string $inputImageAbsolutePath, Image $image, ExecutorResult $executorResult)
     {
     }
 
@@ -259,5 +273,40 @@ class OptimizationExecutorRemote extends OptimizationExecutorBase
         }
 
         return false;
+    }
+
+    protected function getResizeSettings(string $imageFilePath, array $processingConfiguration): array
+    {
+        /** @var GraphicalFunctionsUtility $graphicalFunctions */
+        $graphicalFunctions = GeneralUtility::makeInstance(GraphicalFunctionsUtility::class);
+        $info = $graphicalFunctions->getImageDimensionsWithoutExtension($imageFilePath);
+        $data = $graphicalFunctions->getImageScale(
+            $info,
+            $processingConfiguration['width'] ?? '',
+            $processingConfiguration['height'] ?? '',
+            $graphicalFunctions->getConfigurationForImageCropScale($processingConfiguration)
+        );
+
+        [$width, $height] = $data;
+
+        $crop = false;
+
+        if ($data['crs']) {
+            if (!$data['origW']) {
+                $data['origW'] = $data[0];
+            }
+            if (!$data['origH']) {
+                $data['origH'] = $data[1];
+            }
+            $width = min($width, $data['origW']);
+            $height = min($height, $data['origH']);
+            $crop = true;
+        }
+
+        return [
+            'width' => $width,
+            'height' => $height,
+            'crop' => $crop
+        ];
     }
 }

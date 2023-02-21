@@ -25,6 +25,7 @@
 namespace SourceBroker\Imageopt\Provider;
 
 use SourceBroker\Imageopt\Configuration\Configurator;
+use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ExecutorResult;
 use SourceBroker\Imageopt\Domain\Model\ProviderResult;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -50,22 +51,24 @@ class OptimizationProvider
     }
 
     /**
-     * @param $image
+     * @param string $imagePath
+     * @param Image $image
      * @param Configurator $providerConfigurator
      * @return object|ProviderResult
      * @throws \Exception
      */
-    public function optimize($image, Configurator $providerConfigurator)
+    public function optimize(string $imagePath, Image $image, Configurator $providerConfigurator)
     {
         $executorsDone = $executorsSuccessful = 0;
         $providerResult = GeneralUtility::makeInstance(ProviderResult::class);
-        $providerResult->setSizeBefore(filesize($image));
+        $providerResult->setSizeBefore(filesize($imagePath));
         foreach ((array)$providerConfigurator->getOption('executors') as $executorKey => $executor) {
             $executorsDone++;
             if (isset($executor['class']) && class_exists($executor['class'])) {
                 $imageOptimizationProvider = GeneralUtility::makeInstance($executor['class']);
                 /** @var $executorResult ExecutorResult */
                 $executorResult = $imageOptimizationProvider->optimize(
+                    $imagePath,
                     $image,
                     GeneralUtility::makeInstance(Configurator::class, $executor)
                 );
@@ -85,8 +88,8 @@ class OptimizationProvider
         if ($executorsSuccessful == $executorsDone) {
             $providerResult->setExecutedSuccessfully(true);
         }
-        clearstatcache(true, $image);
-        $providerResult->setSizeAfter(filesize($image));
+        clearstatcache(true, $imagePath);
+        $providerResult->setSizeAfter(filesize($imagePath));
 
         return $providerResult;
     }
