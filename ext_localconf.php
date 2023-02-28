@@ -12,3 +12,16 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][TYPO3\CMS\Core\Resource\Service\Fi
 $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::class] = [
     'className' => SourceBroker\Imageopt\Xclass\ContentObjectRenderer::class
 ];
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][TYPO3\CMS\Backend\Form\Element\ImageManipulationElement::class] = [
+    'className' => SourceBroker\Imageopt\Xclass\ImageManipulationElement::class
+];
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][TYPO3\CMS\Backend\Controller\Wizard\ImageManipulationController::class] = [
+    'className' => SourceBroker\Imageopt\Xclass\ImageManipulationController::class
+];
+
+if (TYPO3_MODE === "BE" )   {
+    $pageRenderer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Page\PageRenderer::class);
+    $pageRenderer->loadRequireJsModule(
+        'TYPO3/CMS/Imageopt/RotateModule'
+    );
+}
