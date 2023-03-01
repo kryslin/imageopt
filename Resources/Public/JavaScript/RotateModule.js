@@ -13,6 +13,11 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       imagesloaded(cropImageSelector.get(0), () => {
         this.imageManipulation.init();
         this.initialize();
+        $(this.imageManipulation.cropper.element).on('ready', () => {
+          setTimeout(() => {
+            this.imageManipulation.resetButton.trigger('click')
+          })
+        });
         this.data = {}
         let variants = JSON.parse(this.imageManipulation.trigger.attr("data-crop-variants"))
         this.imageManipulation.cropVariantTriggers.each((index, button) => {
@@ -63,15 +68,18 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       $thumbnailCropImage.css(cropImageCss);
     }
     setCropArea = (cropArea) => {
-      const aspectRatio = this.imageManipulation.currentCropVariant.allowedAspectRatios[this.imageManipulation.currentCropVariant.selectedRatio];
       const rotate = this.imageManipulation.data[this.imageManipulation.currentCropVariant.id].rotate || 0
-      0 === aspectRatio.value
-        ? this.imageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.width, x: cropArea.x, y: cropArea.y })
-        : this.imageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.height * aspectRatio.value, x: cropArea.x, y: cropArea.y });
-      
-      if (ImageManipulation.cropper.cropped) {
-        this.rotate(rotate - RotationModule.transformAngle(this.imageManipulation.cropper.getData().rotate))
+      const newRotate = rotate - RotationModule.transformAngle(this.imageManipulation.cropper.getData().rotate)
+      if (ImageManipulation.cropper.cropped && newRotate) {
+        this.rotate(newRotate)
       }
+
+      const aspectRatio = this.imageManipulation.currentCropVariant.allowedAspectRatios[this.imageManipulation.currentCropVariant.selectedRatio];
+      const data = 0 === aspectRatio.value
+        ? { height: cropArea.height, width: cropArea.width, x: cropArea.x, y: cropArea.y }
+        : { height: cropArea.height, width: cropArea.height * aspectRatio.value, x: cropArea.x, y: cropArea.y }
+
+      this.imageManipulation.cropper.setData(data);
     }
     save = (data) => {
       this.imageManipulation.cropVariantTriggers.each((index, button) => {
