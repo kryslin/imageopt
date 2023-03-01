@@ -5,6 +5,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       this.imageManipulation.initializeCropperModal = this.initializeCropperModal
       this.imageManipulation.updatePreviewThumbnail = this.updatePreviewThumbnail
       this.imageManipulation.setCropArea = this.setCropArea
+      this.imageManipulation.update = this.update
       this.imageManipulation.save = this.save
     }
     initializeCropperModal = () => {
@@ -99,6 +100,33 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       $input.val(payload);
       validation.markFieldAsChanged($input);
       this.imageManipulation.currentModal.modal("hide");
+    }
+    update = (cropped) => {
+      const extended = $.extend(!0, {}, cropped);
+      const allowedAspectRatio = cropped.allowedAspectRatios[cropped.selectedRatio];
+      
+      this.imageManipulation.currentModal.find("[data-bs-option]").removeClass("active");
+      this.imageManipulation.currentModal.find(`[data-bs-option="${cropped.selectedRatio}"]`).addClass("active");
+      this.imageManipulation.setAspectRatio(allowedAspectRatio);
+      this.imageManipulation.setCropArea(extended.cropArea);
+      this.imageManipulation.currentCropVariant = $.extend(!0, {}, extended, cropped);
+      this.imageManipulation.cropBox?.find(this.imageManipulation.coverAreaSelector).remove();
+      
+      if (this.imageManipulation.cropBox?.has(this.imageManipulation.focusAreaSelector).length) {
+        this.imageManipulation.focusArea.resizable("destroy").draggable("destroy");
+        this.imageManipulation.focusArea.remove()
+      }
+      if (cropped.focusArea) {
+        if (RotationModule.isEmptyArea(cropped.focusArea)) {
+          this.imageManipulation.currentCropVariant.focusArea = $.extend(!0, {}, this.imageManipulation.defaultFocusArea)
+        }
+        this.imageManipulation.initFocusArea(this.imageManipulation.cropBox);
+        this.imageManipulation.scaleAndMoveFocusArea(this.imageManipulation.currentCropVariant.focusArea);
+      }
+      if (cropped.coverAreas) {
+        this.imageManipulation.initCoverAreas(this.imageManipulation.cropBox, this.imageManipulation.currentCropVariant.coverAreas);
+      }
+      this.imageManipulation.updatePreviewThumbnail(this.imageManipulation.currentCropVariant, this.imageManipulation.activeCropVariantTrigger);
     }
     initialize = () => {
       setTimeout(() => {
@@ -320,6 +348,9 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
     }
     static toCssPercent = (value) => {
       return 100 * value + "%";
+    }
+    static isEmptyArea(object) {
+      return $.isEmptyObject(object);
     }
     static serializeCropVariants = (data) => {
       return JSON.stringify(
