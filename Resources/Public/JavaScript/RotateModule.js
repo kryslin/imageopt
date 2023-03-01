@@ -13,9 +13,6 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       imagesloaded(cropImageSelector.get(0), () => {
         this.imageManipulation.init();
         this.initialize();
-        $(this.imageManipulation.cropper.element).on('ready', () => {
-          this.rotate(RotationModule.transformAngle(this.imageManipulation.data[this.imageManipulation.currentCropVariant.id].rotate ?? 0))
-        });
         this.data = {}
         let variants = JSON.parse(this.imageManipulation.trigger.attr("data-crop-variants"))
         this.imageManipulation.cropVariantTriggers.each((index, button) => {
@@ -67,11 +64,14 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
     }
     setCropArea = (cropArea) => {
       const aspectRatio = this.imageManipulation.currentCropVariant.allowedAspectRatios[this.imageManipulation.currentCropVariant.selectedRatio];
-      const rotate = this.imageManipulation.data[this.imageManipulation.currentCropVariant.id].rotate
+      const rotate = this.imageManipulation.data[this.imageManipulation.currentCropVariant.id].rotate || 0
       0 === aspectRatio.value
-        ? ImageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.width, x: cropArea.x, y: cropArea.y, rotate: rotate })
-        : ImageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.height * aspectRatio.value, x: cropArea.x, y: cropArea.y, rotate: rotate });
-      this.updateRotateInformation()
+        ? this.imageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.width, x: cropArea.x, y: cropArea.y })
+        : this.imageManipulation.cropper.setData({ height: cropArea.height, width: cropArea.height * aspectRatio.value, x: cropArea.x, y: cropArea.y });
+      
+      if (ImageManipulation.cropper.cropped) {
+        this.rotate(rotate - RotationModule.transformAngle(this.imageManipulation.cropper.getData().rotate))
+      }
     }
     save = (data) => {
       this.imageManipulation.cropVariantTriggers.each((index, button) => {
@@ -158,23 +158,27 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
 
       const orientation = $thumbnailContainer.hasClass('wide') ? 'horizontal' : 'vertical'
 
-      $thumbnail.height($thumbnail.height())
-      $thumbnail.width($thumbnail.width())
+      if (!this.thumbnailHeight && !this.thumbnailWidth) {
+        $thumbnail.height($thumbnail.height())
+        $thumbnail.width($thumbnail.width())
+        this.thumbnailHeight = $thumbnail.height();
+        this.thumbnailWidth = $thumbnail.width();
+      }
 
       let thumbnailOffset;
       if (orientation === 'horizontal') {
-        thumbnailOffset = ($thumbnail.width() - $thumbnail.height()) / 2
+        thumbnailOffset = (this.thumbnailWidth - this.thumbnailHeight) / 2
       } else {
-        thumbnailOffset = ($thumbnail.height() - $thumbnail.width()) / 2
+        thumbnailOffset = (this.thumbnailHeight - this.thumbnailWidth) / 2
       }
-
+      
       if (RotationModule.isLandscapeOrientation(angle)) {
         $thumbnail.css('transform', 'rotate(' + angle + 'deg)')
         $thumbnailCanvas.css({
           left: '0px',
           top: '0px',
-          height: $thumbnail.height() + 'px',
-          width: $thumbnail.width() + 'px',
+          height: this.thumbnailHeight + 'px',
+          width: this.thumbnailWidth + 'px',
         })
       } else {
         const thumbnailTransform = [
@@ -187,8 +191,8 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
         $thumbnailCanvas.css({
           left: (RotationModule.is90Vertical(angle, orientation) || RotationModule.is270Vertical(angle, orientation) ? -thumbnailOffset : thumbnailOffset) + 'px',
           top: (RotationModule.is90Horizontal(angle, orientation) ? -thumbnailOffset : thumbnailOffset) + 'px',
-          height: $thumbnail.width() + 'px',
-          width: $thumbnail.height() + 'px',
+          height: this.thumbnailWidth + 'px',
+          width: this.thumbnailHeight + 'px',
         })
       }
 
@@ -200,7 +204,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
           newThumbnailCanvasDataCss = {
             height: newThumbnailHeight + 'px',
             width: $thumbnailContainer.width() + 'px',
-            top: Math.floor(($thumbnailContainer.height() - newThumbnailWidth) / 2) + 'px',
+            top: Math.floor(($thumbnailContainer.height() - newThumbnailHeight) / 2) + 'px',
             left: 0 + 'px',
           }
         } else {
@@ -220,7 +224,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
             height: $thumbnailContainer.height() + 'px',
             width: newThumbnailWidth + 'px',
             top: 0 + 'px',
-            left: Math.floor((newThumbnailWidth - $thumbnailCanvas.height()) / 2) + 'px',
+            left: Math.floor(($thumbnailCanvas.width() - newThumbnailWidth) / 2) + 'px',
           }
         } else {
           newThumbnailCanvasDataCss = {
@@ -238,7 +242,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       } else {
         newThumbnailOffset = parseFloat(newThumbnailCanvasDataCss.height) / parseFloat(newThumbnailCanvasDataCss.width) * thumbnailOffset
       }
-
+      
 
       $previewThumbnailCanvas.css({
         height: newThumbnailCanvasDataCss.height,
@@ -256,14 +260,14 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       let thumbnailCss;
       if (orientation === 'horizontal') {
         thumbnailCss = {
-          height: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.height : newThumbnailCanvasDataCss.width,
           width: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.width : newThumbnailCanvasDataCss.height,
+          height: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.height : newThumbnailCanvasDataCss.width,
           transform: RotationModule.isLandscapeOrientation(angle) ? 'rotate(' + angle + 'deg)' : 'rotate(' + angle + 'deg) translateX(' + (RotationModule.is90Horizontal(angle, orientation) ? newThumbnailOffset : -newThumbnailOffset) +  'px) translateY(' + (RotationModule.is90Horizontal(angle, orientation) ? newThumbnailOffset : -newThumbnailOffset) + 'px)'
         }
       } else {
         thumbnailCss = {
-          height: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.height : newThumbnailCanvasDataCss.width,
           width: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.width : newThumbnailCanvasDataCss.height,
+          height: RotationModule.isLandscapeOrientation(angle) ? newThumbnailCanvasDataCss.height : newThumbnailCanvasDataCss.width,
           transform: RotationModule.isLandscapeOrientation(angle) ? 'rotate(' + angle + 'deg)' : 'rotate(' + angle + 'deg) translateX(' + (RotationModule.is270Vertical(angle, orientation) ? newThumbnailOffset : -newThumbnailOffset) +  'px) translateY(' + (RotationModule.is270Vertical(angle, orientation) ? newThumbnailOffset : -newThumbnailOffset) + 'px)'
         }
       }

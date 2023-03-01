@@ -29,8 +29,8 @@ class ImageManipulationElement extends \TYPO3\CMS\Backend\Form\Element\ImageMani
         $originalElementValue = json_decode($elementValue, true);
         $config = parent::processConfiguration($config, $elementValue, $file);
         foreach ($originalElementValue as $key => $settings) {
-            if (!empty($config['cropVariants'][$key]) && !empty($settings['rotate'])) {
-                $config['cropVariants'][$key]['rotate'] = (int)$settings['rotate'];
+            if (!empty($config['cropVariants'][$key])) {
+                $config['cropVariants'][$key]['rotate'] = (int)($settings['rotate'] ?? 0);
                 $originalElementValue[$key]['rotate'] = $config['cropVariants'][$key]['rotate'];
             }
         }
