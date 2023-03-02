@@ -22,6 +22,7 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['Objects'][TYPO3\CMS\Backend\Controller\Wizar
 if (TYPO3_MODE === "BE" )   {
     $pageRenderer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Page\PageRenderer::class);
     $pageRenderer->loadRequireJsModule(
-        'TYPO3/CMS/Imageopt/RotateModule'
+        'TYPO3/CMS/Imageopt/RotateModule',
+        'function(RotateImage) { RotateImage.setTYPO3Version(' . \TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version) . ');}'
     );
 }

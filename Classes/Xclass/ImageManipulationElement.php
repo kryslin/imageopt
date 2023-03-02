@@ -6,6 +6,7 @@ namespace SourceBroker\Imageopt\Xclass;
 use TYPO3\CMS\Backend\Form\NodeFactory;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\VersionNumberUtility;
 
 class ImageManipulationElement extends \TYPO3\CMS\Backend\Form\Element\ImageManipulationElement
 {
@@ -20,7 +21,12 @@ class ImageManipulationElement extends \TYPO3\CMS\Backend\Form\Element\ImageMani
             $this->templateView->getPartialRootPaths(),
             [GeneralUtility::getFileAbsFileName('EXT:imageopt/Resources/Private/Partials/ImageManipulation/')]
         ));
-        $this->templateView->setTemplatePathAndFilename(GeneralUtility::getFileAbsFileName('EXT:imageopt/Resources/Private/Templates/ImageManipulation/ImageManipulationElement.html'));
+
+        $this->templateView->setTemplatePathAndFilename(
+            GeneralUtility::getFileAbsFileName(
+                'EXT:imageopt/Resources/Private/Templates/ImageManipulation/' . $this->getTemplateName()
+            )
+        );
     }
 
 
@@ -36,5 +42,12 @@ class ImageManipulationElement extends \TYPO3\CMS\Backend\Form\Element\ImageMani
         }
         $elementValue = json_encode($originalElementValue);
         return $config;
+    }
+
+    protected function getTemplateName(): string
+    {
+        return VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version) < 11000000
+            ? 'ImageManipulationElement_v10.html'
+            : 'ImageManipulationElement.html';
     }
 }

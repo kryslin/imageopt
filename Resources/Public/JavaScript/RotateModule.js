@@ -8,33 +8,45 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       this.imageManipulation.update = this.update
       this.imageManipulation.save = this.save
     }
+    setTYPO3Version = (version) => {
+      this.typo3version = version
+    }
+    getCropper = () => {
+      if (this.typo3version < 11000000) {
+        return this.imageManipulation.cropper.data('cropper')
+      } else {
+        return this.imageManipulation.cropper
+      }
+    }
     initializeCropperModal = () => {
-      const cropImageSelector  = this.imageManipulation.currentModal.find(ImageManipulation.cropImageSelector);
-      imagesloaded(cropImageSelector.get(0), () => {
-        this.imageManipulation.init();
-        this.initialize();
-        $(this.imageManipulation.cropper.element).on('ready', () => {
-          setTimeout(() => {
-            this.imageManipulation.resetButton.trigger('click')
-          })
-        });
-        this.data = {}
-        let variants = JSON.parse(this.imageManipulation.trigger.attr("data-crop-variants"))
-        this.imageManipulation.cropVariantTriggers.each((index, button) => {
-          if (variants.hasOwnProperty(button.dataset.cropVariantId)) {
-            this.data[button.dataset.cropVariantId] = {
-              id: button.dataset.cropVariantId,
-              rotate: variants.rotate ?? 0
+      const cropImageSelector  = this.imageManipulation.currentModal.find(this.imageManipulation.cropImageSelector);
+      imagesloaded(cropImageSelector, () => {
+        setTimeout(() => {
+          this.imageManipulation.init();
+          this.initialize();
+          $(this.getCropper().element).on('ready', () => {
+            setTimeout(() => {
+              this.imageManipulation.resetButton.trigger('click')
+            })
+          });
+          this.data = {}
+          let variants = JSON.parse(this.imageManipulation.trigger.attr("data-crop-variants"))
+          this.imageManipulation.cropVariantTriggers.each((index, button) => {
+            if (variants.hasOwnProperty(button.dataset.cropVariantId)) {
+              this.data[button.dataset.cropVariantId] = {
+                id: button.dataset.cropVariantId,
+                rotate: variants.rotate ?? 0
+              }
             }
-          }
-        })
+          })
+        }, this.typo3version < 11000000 ? 100 : 0)
       });
     }
     updatePreviewThumbnail = (currentCropVariant, activeCropVariantTrigger) => {
       const $thumbnailCropArea = activeCropVariantTrigger.find(".t3js-cropper-preview-thumbnail-crop-area"),
         $thumbnailCropImage = activeCropVariantTrigger.find(".t3js-cropper-preview-thumbnail-crop-image"),
         $thumbnailFocusArea = activeCropVariantTrigger.find(".t3js-cropper-preview-thumbnail-focus-area"),
-        canvasData = ImageManipulation.cropper.getCanvasData();
+        canvasData = this.getCropper().getCanvasData();
 
       const cropAreaCss = {
         height: RotationModule.toCssPercent(currentCropVariant.cropArea.height / canvasData.naturalHeight),
@@ -59,18 +71,19 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       const width = parseFloat(thumbnailCropAreaCss.width) * (1 / (currentCropVariant.cropArea.width / canvasData.naturalWidth)) + "px"
 
       const cropImageCss = {
-        height: RotationModule.isLandscapeOrientation(ImageManipulation.cropper.getData().rotate) ? height : width,
+        height: RotationModule.isLandscapeOrientation(this.getCropper().getData().rotate) ? height : width,
         margin: -1 * parseFloat(thumbnailCropAreaCss.left) + "px",
         marginTop: -1 * parseFloat(thumbnailCropAreaCss.top) + "px",
-        width: RotationModule.isLandscapeOrientation(ImageManipulation.cropper.getData().rotate) ?  width : height,
+        width: RotationModule.isLandscapeOrientation(this.getCropper().getData().rotate) ?  width : height,
       }
 
       $thumbnailCropImage.css(cropImageCss);
     }
     setCropArea = (cropArea) => {
       const rotate = this.imageManipulation.data[this.imageManipulation.currentCropVariant.id].rotate || 0
-      const newRotate = rotate - RotationModule.transformAngle(this.imageManipulation.cropper.getData().rotate)
-      if (ImageManipulation.cropper.cropped && newRotate) {
+      const newRotate = rotate - RotationModule.transformAngle(this.getCropper().getData().rotate)
+      const isCropped = this.typo3version < 11000000 ? this.getCropper().isCropped : this.getCropper().cropped
+      if (isCropped && newRotate) {
         this.rotate(newRotate)
       }
 
@@ -79,7 +92,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
         ? { height: cropArea.height, width: cropArea.width, x: cropArea.x, y: cropArea.y }
         : { height: cropArea.height, width: cropArea.height * aspectRatio.value, x: cropArea.x, y: cropArea.y }
 
-      this.imageManipulation.cropper.setData(data);
+      this.getCropper().setData(data);
     }
     save = (data) => {
       this.imageManipulation.cropVariantTriggers.each((index, button) => {
@@ -154,7 +167,7 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
       })
     }
     rotate = (degree) => {
-      const angle = RotationModule.transformAngle(this.imageManipulation.cropper.getData().rotate + degree)
+      const angle = RotationModule.transformAngle(this.getCropper().getData().rotate + degree)
 
       // Thumbnail and Preview Thumbnail
 
@@ -285,15 +298,15 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
 
       // Main image
 
-      const containerData = this.imageManipulation.cropper.getContainerData();
+      const containerData = this.getCropper().getContainerData();
 
-      this.imageManipulation.cropper.setCropBoxData({
+      this.getCropper().setCropBoxData({
         width: 2, height: 2, top: (containerData.height/ 2) - 1, left: (containerData.width / 2) - 1
       });
 
-      this.imageManipulation.cropper.rotate(degree);
+      this.getCropper().rotate(degree);
 
-      const canvasData = this.imageManipulation.cropper.getCanvasData();
+      const canvasData = this.getCropper().getCanvasData();
       const newWidth = canvasData.width * (containerData.height / canvasData.height);
 
       let newCanvasData;
@@ -314,8 +327,8 @@ define(['TYPO3/CMS/Backend/ImageManipulation', 'imagesloaded', 'TYPO3/CMS/Backen
         }
       }
 
-      this.imageManipulation.cropper.setCanvasData(newCanvasData);
-      this.imageManipulation.cropper.setCropBoxData(newCanvasData);
+      this.getCropper().setCanvasData(newCanvasData);
+      this.getCropper().setCropBoxData(newCanvasData);
       
       this.data[this.imageManipulation.currentCropVariant.id].rotate = angle
 
