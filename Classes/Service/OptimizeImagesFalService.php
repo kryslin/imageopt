@@ -103,18 +103,14 @@ class OptimizeImagesFalService
         if (file_exists($sourceFile)) {
             if (is_readable($sourceFile)) {
                 $modeResults = $this->optimizeImageService->optimize($sourceFile);
-
-                $defaultOptimizationResult = isset($modeResults['default'])
-                    ? $modeResults['default']
-                    : reset($modeResults);
-
+                $defaultOptimizationResult = $modeResults['default'] ?? reset($modeResults);
                 if ($this->configurator->getOption('log.enable')) {
                     foreach ($modeResults as $modeResult) {
                         $this->modeResultRepository->add($modeResult);
                     }
                 }
                 if ($defaultOptimizationResult->isExecutedSuccessfully()) {
-                    if ($defaultOptimizationResult->getSizeBefore() > $defaultOptimizationResult->getSizeAfter()) {
+                    if ((int)$defaultOptimizationResult->getSizeBefore() > (int)$defaultOptimizationResult->getSizeAfter()) {
                         $processedFal->updateWithLocalFile(
                             $this->objectManager->get(TemporaryFileUtility::class)->createTemporaryCopy($sourceFile)
                         );
@@ -152,18 +148,12 @@ class OptimizeImagesFalService
         return $modeResults;
     }
 
-    /**
-     * @param int $numberOfImagesToProcess
-     * @return array
-     */
-    public function getFalProcessedFilesToOptimize($numberOfImagesToProcess)
+
+    public function getFalProcessedFilesToOptimize(int $numberOfImagesToProcess, array $extensions): array
     {
-        return $this->falProcessedFileRepository->findNotOptimizedRaw($numberOfImagesToProcess);
+        return $this->falProcessedFileRepository->findNotOptimizedRaw($numberOfImagesToProcess, $extensions);
     }
 
-    /**
-     *
-     */
     public function resetOptimizationFlag()
     {
         $this->falProcessedFileRepository->resetOptimizationFlag();
