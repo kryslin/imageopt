@@ -54,16 +54,10 @@ class ProcessedFileRepository extends \TYPO3\CMS\Core\Resource\ProcessedFileRepo
             )->setMaxResults((int)$limit)->execute()->fetchAll();
     }
 
-    /**
-     * Get all not optimized images with $limit
-     *
-     * @param int $limit Number of not optimized images to return
-     * @return array
-     */
-    public function findNotOptimized($limit = 50)
+    public function findNotOptimized(int $limit, array $extensions)
     {
         $processedFiles = [];
-        foreach ($this->findNotOptimizedRaw($limit) as $processedFileRaw) {
+        foreach ($this->findNotOptimizedRaw($limit, $extensions) as $processedFileRaw) {
             $processedFiles[] = $this->createDomainObject($processedFileRaw);
         }
 

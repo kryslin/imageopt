@@ -81,6 +81,6 @@ CREATE TABLE tx_imageopt_domain_model_croppedfile (
     configuration blob,
 
     PRIMARY KEY (uid),
-    KEY combined_1 (original,configurationsha1),
+    KEY combined_1 (original,configuration_sha1),
     KEY identifier (storage,identifier(180))
 );
