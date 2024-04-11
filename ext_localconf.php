@@ -1,8 +1,6 @@
 <?php
 
-defined('TYPO3_MODE') || die('Access denied.');
-
-$GLOBALS['TYPO3_CONF_VARS']['EXT']['EXTCONF']['imageopt']['database'] = \SourceBroker\Imageopt\Database\Database87::class;
+defined('TYPO3') or die('Access denied.');
 
 // Few xclasses to make TYPO3 to create copy of images even if not needed.
 // This way we can make optimization on copies always to not destroy original images.

@@ -2,14 +2,30 @@
 Changelog
 ---------
 
-master
-~~~~~~
+7.0.2
+~~~~~
+
+1) [BUGFIX] Cleanup TCA from deprecated showRecordFieldList.
+
+7.0.1
+~~~~~
+
+1) [BUGFIX] Move addStaticFile from ext_tables to TCA/Overrides for sys_template. Replace TYPO3_MODE to TYPO3.
+
+7.0.0
+~~~~~
 
 1) [TASK] TYPO3 11 compatibility.
 2) [BUGFIX] Fix failing when step has no provider.
 3) [TASK] Extended ddev testbed.
 4) [TASK] Cleanup ext_tables.sql from standard fields / rename TS setup extension
 5) [BUGFIX] Fix $file in isAllowedToForceFrontendImageProcessing is not always a path (string).
+6) [FEATURE] Allow to choose what files extensions are to be optimised.
+7) [TASK] Remove wrap for database queries. Was used when yet TYPO3 below 8.7 was supported.
+8) [BUGFIX][BREAKING] Add gif as supported extension for webp imagemagick provider.
+9) [FEATURE] Add new default settings. Only webp optimisation.
+10) [BUGFIX] Normalise size_before, size_after database schema to varchar. The best would be
+    "int(11) unsigned DEFAULT NULL", but TYPO3 database update schema command do not accept this.
 
 6.0.3
 ~~~~~
