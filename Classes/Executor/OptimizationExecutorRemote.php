@@ -274,39 +274,4 @@ class OptimizationExecutorRemote extends OptimizationExecutorBase
 
         return false;
     }
-
-    protected function getResizeSettings(string $imageFilePath, array $processingConfiguration): array
-    {
-        /** @var GraphicalFunctionsUtility $graphicalFunctions */
-        $graphicalFunctions = GeneralUtility::makeInstance(GraphicalFunctionsUtility::class);
-        $info = $graphicalFunctions->getImageDimensionsWithoutExtension($imageFilePath);
-        $data = $graphicalFunctions->getImageScale(
-            $info,
-            $processingConfiguration['width'] ?? '',
-            $processingConfiguration['height'] ?? '',
-            $graphicalFunctions->getConfigurationForImageCropScale($processingConfiguration)
-        );
-
-        [$width, $height] = $data;
-
-        $crop = false;
-
-        if ($data['crs']) {
-            if (!$data['origW']) {
-                $data['origW'] = $data[0];
-            }
-            if (!$data['origH']) {
-                $data['origH'] = $data[1];
-            }
-            $width = min($width, $data['origW']);
-            $height = min($height, $data['origH']);
-            $crop = true;
-        }
-
-        return [
-            'width' => $width,
-            'height' => $height,
-            'crop' => $crop
-        ];
-    }
 }
