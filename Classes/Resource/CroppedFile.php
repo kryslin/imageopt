@@ -128,7 +128,7 @@ class CroppedFile extends AbstractFile
             throw new \InvalidArgumentException('Processing folder does not exist.', 2219532741);
         }
 
-        $fileIdentifier = $this->driver->addFile($filePath, $processingFolder->getIdentifier(), $this->getName());
+        $fileIdentifier = $this->driver->addFile($filePath, $processingFolder->getIdentifier(), $this->getName(), false);
 
         // Update some related properties
         $this->identifier = $fileIdentifier;

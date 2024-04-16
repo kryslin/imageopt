@@ -28,6 +28,7 @@ use SourceBroker\Imageopt\Configuration\Configurator;
 use SourceBroker\Imageopt\Domain\Dto\Image;
 use SourceBroker\Imageopt\Domain\Model\ExecutorResult;
 use SourceBroker\Imageopt\Resource\CroppedFileRepository;
+use SourceBroker\Imageopt\Utility\GraphicalFunctionsUtility;
 use TYPO3\CMS\Core\Imaging\ImageManipulation\Area;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -88,13 +89,8 @@ class OptimizationExecutorRemoteKraken extends OptimizationExecutorRemote
                 copy($image->getOriginalImagePath(), $inputImageAbsolutePath);
             }
 
-            $resizeSettings = $this->getResizeSettings($inputImageAbsolutePath, $processingConfiguration);
             $resize = [
-                'resize' => [
-                    'width' => $resizeSettings['width'],
-                    'height' => $resizeSettings['height'],
-                    'strategy' => $resizeSettings['crop'] ? 'fit' : 'exact'
-                ]
+                'resize' => $this->getResizeSettings($inputImageAbsolutePath, $processingConfiguration)
             ];
         }
 
@@ -123,6 +119,77 @@ class OptimizationExecutorRemoteKraken extends OptimizationExecutorRemote
             $executorResult->setErrorMessage($result['error']);
             $executorResult->setCommandStatus('Failed');
         }
+    }
+
+    protected function getResizeSettings(string $imageFilePath, array $processingConfiguration): array
+    {
+        /** @var GraphicalFunctionsUtility $graphicalFunctions */
+        $graphicalFunctions = GeneralUtility::makeInstance(GraphicalFunctionsUtility::class);
+        $info = $graphicalFunctions->getImageDimensionsWithoutExtension($imageFilePath);
+        $data = $graphicalFunctions->getImageScale(
+            $info,
+            $processingConfiguration['width'] ?? '',
+            $processingConfiguration['height'] ?? '',
+            $graphicalFunctions->getConfigurationForImageCropScale($processingConfiguration)
+        );
+
+        [$width, $height] = $data;
+
+        if ($data['crs']) {
+            if (!$data['origW']) {
+                $data['origW'] = $data[0];
+            }
+            if (!$data['origH']) {
+                $data['origH'] = $data[1];
+            }
+
+            $finalWidth = min($width, $data['origW']);
+            $finalHeight = min($height, $data['origH']);
+
+            [$originalWidth, $originalHeight] = $info;
+
+            $originalRatio = $originalWidth / $originalHeight;
+            $finalRatio = $finalWidth / $finalHeight;
+
+            $focusX = $processingConfiguration['focusPoint']['x'] ?? 0.5 ?: 0.5;
+            $focusY = $processingConfiguration['focusPoint']['y'] ?? 0.5 ?: 0.5;
+
+            if ($originalRatio > $finalRatio) {
+                $width = $originalHeight * $finalRatio;
+                $scale = $finalWidth / $width * 100;
+                $height = $originalHeight;
+            } else {
+                $width = $originalWidth;
+                $height = $originalWidth / $finalRatio;
+                $scale = $finalHeight / $height * 100;
+            }
+
+            $offsetX = $originalWidth - $width;
+            if ($originalWidth - ($originalWidth * $focusX) >= $width / 2) {
+                $offsetX = (int)(($originalWidth * $focusX) - $width / 2);
+            }
+            $offsetX = max($offsetX, 0);
+
+            $offsetY = $originalHeight - $height;
+            if ($originalHeight - ($originalHeight * $focusY) >= $height / 2) {
+                $offsetY = (int)(($originalHeight * $focusY) - $height / 2);
+            }
+            $offsetY = max($offsetY, 0);
+
+            return [
+                'width' => $width,
+                'height' => $height,
+                'x' => $offsetX,
+                'y' => $offsetY,
+                'scale' => $scale,
+                'strategy' => 'crop'
+            ];
+        }
+        return [
+            'width' => $width,
+            'height' => $height,
+            'strategy' => 'exact'
+        ];
     }
 
     /**
